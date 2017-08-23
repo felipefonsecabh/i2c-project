@@ -4,6 +4,9 @@ from smbus import SMBus
 import struct
 import asyncore
 import socket
+import threading
+from multiprocessing import Process,Queue
+#import socketserver
 
 start_time = datetime.now()
 
@@ -26,18 +29,20 @@ teste = 30
 
 #servidor tcp assincrono
 
+#try 1
+
 class dataHandler(asyncore.dispatcher_with_send):
     def handle_read(self):
-        data = self.recv(8192)
-        #self.send(data)
-        print(data)
+        data = self.recv(500)
+        #process data and send to i2c bus here
+        #print(data)
 
 class Server(asyncore.dispatcher):
     def __init__(self,host,port):
         asyncore.dispatcher.__init__(self)
         self.create_socket(socket.AF_INET,socket.SOCK_STREAM)
         self.bind((host,port))
-        self.listen(5)
+        self.listen(1)
     
     def handle_accept(self):
         pair = self.accept()
@@ -49,28 +54,34 @@ class Server(asyncore.dispatcher):
             handler = dataHandler(sock)
 
 
+#try 2
+
+server = Server('localhost',8080)
+loop_thread = threading.Thread(target=asyncore.loop,name="AsyncoreLoop")
 
 if __name__ == '__main__':
-    server = Server('localhost',8080)
-    asyncore.loop()
+    
+    #try 1
+    #server()
+
+    #try 2
+    loop_thread.start()
     
     prevmillis = millis()
-
+    print('Servidor rodando')
     while True:
         currentmillis = millis()
         if(currentmillis - prevmillis > interval):
             
-            #write
             
-            #bytescommand = struct.pack('=2fbb',temperatura,vazao,command,teste) #para evitar o ajuste
-            #bus.write_block_data(arduinoAddress,1,list(bytescommand))
-            #print(list(bytescommand))
-            
-            #request
-            
+            #read i2c bus each interval
             block = bus.read_i2c_block_data(arduinoAddress,2,27)
             output = struct.unpack('6f3b',bytes(block))
-            print(output)
-            print(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3])
+
+            #process data
+            #print(output)
+            #print(datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3])
+
+            #next execution
             prevmillis = currentmillis
         
